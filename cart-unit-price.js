@@ -132,34 +132,52 @@
       if (qty) totalQty += qty;
     });
 
-    if (totalQty <= 1) return; // carrito con 1 sola pieza: no aplica mayoreo, no hay nada que mostrar
+    if (totalQty <= 1) {
+      traducirTextoMayoreo();
+      return; // carrito con 1 sola pieza: no aplica mayoreo, no hay nada que mostrar
+    }
 
     // 2) Para cada línea, buscar el precio de SU modelo al nivel del total del carrito
-    itemEls.forEach(function (itemEl) {
-      if (itemEl.querySelector('.vz-unit-price')) return;
+    var sumaConMayoreo = 0;
+    var algunaLineaTieneMayoreo = false;
 
+    itemEls.forEach(function (itemEl) {
       var titleEl = itemEl.querySelector('.ec-cart-item__title');
+      var qtyEl = itemEl.querySelector('.ec-cart-item__count input') || itemEl.querySelector('.ec-cart-item__count');
+      var lineQty = qtyEl ? parseInt(qtyEl.value || qtyEl.textContent) : null;
+
+      if (titleEl && lineQty) {
+        var productName = titleEl.textContent.trim();
+        var unitPrice = getUnitPrice(productName, totalQty);
+        if (unitPrice !== null) {
+          sumaConMayoreo += unitPrice * lineQty;
+          algunaLineaTieneMayoreo = true;
+        } else {
+          // Modelo sin tabulador de mayoreo: usa su precio normal de linea tal cual lo muestra Ecwid
+          var lineTotalEl = itemEl.querySelector('.ec-cart-item__price-inner');
+          var lineTotalNum = lineTotalEl ? parseFloat(lineTotalEl.textContent.replace(/[^0-9.]/g, '')) : 0;
+          sumaConMayoreo += lineTotalNum || 0;
+        }
+      }
+
+      if (itemEl.querySelector('.vz-unit-price')) return;
       if (!titleEl) return;
 
-      var productName = titleEl.textContent.trim();
-      var unitPrice = getUnitPrice(productName, totalQty);
-      if (unitPrice === null) return; // modelo no está en la tabla, no mostramos nada
+      var productName2 = titleEl.textContent.trim();
+      var unitPrice2 = getUnitPrice(productName2, totalQty);
+      if (unitPrice2 === null) return; // modelo no está en la tabla, no mostramos nada
 
       var priceEl = itemEl.querySelector('.ec-cart-item__price-inner');
       if (!priceEl) return;
 
-      // Piezas de ESTA línea (este modelo/sabor específico), para calcular su total
-      var qtyEl = itemEl.querySelector('.ec-cart-item__count input') || itemEl.querySelector('.ec-cart-item__count');
-      var lineQty = qtyEl ? parseInt(qtyEl.value || qtyEl.textContent) : null;
-
       var tag = document.createElement('div');
       tag.className = 'vz-unit-price';
       tag.style.cssText = 'font-size:12px;color:#888;text-align:right;margin-top:3px;';
-      tag.textContent = '$' + unitPrice.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' c/u';
+      tag.textContent = '$' + unitPrice2.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' c/u';
       priceEl.parentNode.appendChild(tag);
 
       if (lineQty) {
-        var lineTotal = unitPrice * lineQty;
+        var lineTotal = unitPrice2 * lineQty;
         var totalTag = document.createElement('div');
         totalTag.className = 'vz-unit-price';
         totalTag.style.cssText = 'font-size:12px;color:#888;text-align:right;margin-top:1px;font-weight:600;';
@@ -167,6 +185,46 @@
         priceEl.parentNode.appendChild(totalTag);
       }
     });
+
+    // 3) Insertar debajo de "Subtotal" el total ya con precios de mayoreo aplicados
+    if (algunaLineaTieneMayoreo) {
+      insertarResumenMayoreo(sumaConMayoreo);
+    }
+
+    // 4) Traducir "Discount for bulk products" a "Descuento por mayoreo"
+    traducirTextoMayoreo();
+  }
+
+  function insertarResumenMayoreo(total) {
+    if (document.querySelector('.vz-subtotal-mayoreo')) {
+      document.querySelector('.vz-subtotal-mayoreo').remove();
+    }
+
+    var candidatos = document.querySelectorAll('div, span, td, p');
+    var subtotalRow = null;
+    for (var i = 0; i < candidatos.length; i++) {
+      if (candidatos[i].textContent.trim() === 'Subtotal') {
+        subtotalRow = candidatos[i].closest('[class*="row"]') || candidatos[i].parentElement;
+        break;
+      }
+    }
+    if (!subtotalRow) return;
+
+    var resumen = document.createElement('div');
+    resumen.className = 'vz-subtotal-mayoreo';
+    resumen.style.cssText = 'display:flex;justify-content:space-between;font-size:13px;color:#555;padding:4px 0;font-weight:600;';
+    resumen.innerHTML = '<span>Total con mayoreo aplicado</span><span>$' + total.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + '</span>';
+    subtotalRow.parentNode.insertBefore(resumen, subtotalRow.nextSibling);
+  }
+
+  function traducirTextoMayoreo() {
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    var node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue.indexOf('Discount for bulk products') !== -1) {
+        node.nodeValue = node.nodeValue.replace('Discount for bulk products', 'Descuento por mayoreo');
+      }
+    }
   }
 
   function waitForCart() {
