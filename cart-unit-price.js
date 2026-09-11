@@ -213,7 +213,7 @@
     var resumen = document.createElement('div');
     resumen.className = 'vz-subtotal-mayoreo';
     resumen.style.cssText = 'display:flex;justify-content:space-between;font-size:13px;color:#555;padding:4px 0;font-weight:600;';
-    resumen.innerHTML = '<span>Total con mayoreo aplicado</span><span>$' + total.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + '</span>';
+    resumen.innerHTML = '<span>Subtotal con mayoreo aplicado</span><span>$' + total.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + '</span>';
     subtotalRow.parentNode.insertBefore(resumen, subtotalRow.nextSibling);
   }
 
