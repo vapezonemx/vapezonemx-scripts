@@ -148,11 +148,24 @@
       var priceEl = itemEl.querySelector('.ec-cart-item__price-inner');
       if (!priceEl) return;
 
+      // Piezas de ESTA línea (este modelo/sabor específico), para calcular su total
+      var qtyEl = itemEl.querySelector('.ec-cart-item__count input') || itemEl.querySelector('.ec-cart-item__count');
+      var lineQty = qtyEl ? parseInt(qtyEl.value || qtyEl.textContent) : null;
+
       var tag = document.createElement('div');
       tag.className = 'vz-unit-price';
       tag.style.cssText = 'font-size:12px;color:#888;text-align:right;margin-top:3px;';
       tag.textContent = '$' + unitPrice.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' c/u';
       priceEl.parentNode.appendChild(tag);
+
+      if (lineQty) {
+        var lineTotal = unitPrice * lineQty;
+        var totalTag = document.createElement('div');
+        totalTag.className = 'vz-unit-price';
+        totalTag.style.cssText = 'font-size:12px;color:#888;text-align:right;margin-top:1px;font-weight:600;';
+        totalTag.textContent = '$' + lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' total (' + lineQty + ' pz)';
+        priceEl.parentNode.appendChild(totalTag);
+      }
     });
   }
 
